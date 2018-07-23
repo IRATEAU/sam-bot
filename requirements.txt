@@ -1,0 +1,5 @@
+SlackClient
+defang
+pymisp
+pyjokes
+logging

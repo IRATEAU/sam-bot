@@ -1,0 +1,9 @@
+{
+	"slack":{
+		"SLACK_BOT_TOKEN" : ""
+	},
+	"misp" : {
+		"url" : "",
+		"key" : ""
+	}
+}
