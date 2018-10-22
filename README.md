@@ -41,7 +41,9 @@ the bot requires that the following taxonomies are enable to run
 		"key" : "kTeD2m9yAHmuv9XYVB5vEAkrijTttwiO04LSQGAV"
 	},
 	"logging" : {
-		"output_file" : "/var/log/this_is_the_log.log"
+		"output_file" : "/var/log/this_is_the_log.log",
+		"output_error_file": "/var/log/this_is_the_error_log.log"
+
 	}
 }
 ~~~~
