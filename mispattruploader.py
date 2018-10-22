@@ -9,10 +9,10 @@ class misp_custom:
 	
 	def __init__(self, misp_url, misp_key):
 		try:
-			self.misp = pymisp.PyMISP(misp_url, misp_key, False, 'json')
+			self.misp = pymisp.PyMISP(misp_url, misp_key, True, 'json')
 		except Exception as err:
 			sys.exit('Batch Job Terminated: MISP connection error - \n'+repr(err))
-		misp_logger = logging.getLogger('mispattruploader')
+		self.misp_logger = logging.getLogger('mispattruploader')
 
 	def submit_to_misp(self, misp, misp_event, misp_objects):
 		'''
@@ -171,7 +171,7 @@ class misp_custom:
 		except Exception as e:
 			error = traceback.format_exc()
 			response = "Error occured when converting string to misp objects:\n %s" %error
-			misp_logger.error(response)
+			self.misp_logger.error(response)
 			return response
 
 		
@@ -200,5 +200,5 @@ class misp_custom:
 		except Exception as e:
 			error = traceback.format_exc()
 			response = "Error occured when submitting to misp:\n %s" %error
-			misp_logger.error(response)
+			self.misp_logger.error(response)
 			return response
