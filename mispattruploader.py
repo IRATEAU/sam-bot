@@ -7,12 +7,12 @@ from urllib.parse import urlparse
 
 class misp_custom:
 	
-	def __init__(self, misp_url, misp_key):
+	def __init__(self, misp_url, misp_key, misp_ssl):
 		try:
-			self.misp = pymisp.PyMISP(misp_url, misp_key, False, 'json')
+			self.misp = pymisp.PyMISP(misp_url, misp_key, misp_ssl, 'json')
 		except Exception as err:
 			sys.exit('Batch Job Terminated: MISP connection error - \n'+repr(err))
-		misp_logger = logging.getLogger('mispattruploader')
+		self.misp_logger = logging.getLogger('mispattruploader')
 
 	def submit_to_misp(self, misp, misp_event, misp_objects):
 		'''
@@ -81,7 +81,7 @@ class misp_custom:
 		return str_comment, tags
 
 
-	def misp_send(self, strMISPEventID, strInput, strInfo):
+	def misp_send(self, strMISPEventID, strInput, strInfo, strUsername):
 		# Establish communication with MISP
 		
 		# The main processing block.
@@ -158,20 +158,23 @@ class misp_custom:
 						l_mispobj_file.add_attribute("filename", value=l_filename.strip(), comment=str_comment)
 						mispobj_files[file_no] = l_mispobj_file
 					file_no +=1
-
+			
+			
 			#add all misp objects to List to be processed and submitted to MISP server as one.
 			objects.append(mispobj_file)
 			objects.append(mispobj_email)
 			objects.append(mispobj_domainip)
+
 			for u_key, u_value in mispobj_urls.items():
 				objects.append(u_value)
 			for f_key, f_value in mispobj_files.items():
 				objects.append(f_value)
 			# Update timestamp and event
+
 		except Exception as e:
 			error = traceback.format_exc()
 			response = "Error occured when converting string to misp objects:\n %s" %error
-			misp_logger.error(response)
+			self.misp_logger.error(response)
 			return response
 
 		
@@ -182,6 +185,7 @@ class misp_custom:
 			a,b = self.submit_to_misp(self.misp, misp_event, objects)
 			for tag in tags:
 				self.misp.tag(misp_event.uuid, tag)
+			self.misp.add_internal_text(misp_event.id, reference="Author: " + strUsername, comment=str_comment)
 			self.misp.fast_publish(misp_event.id, alert=False)
 			misp_event = self.misp.get_event(misp_event.id)
 			response = misp_event
@@ -200,5 +204,5 @@ class misp_custom:
 		except Exception as e:
 			error = traceback.format_exc()
 			response = "Error occured when submitting to misp:\n %s" %error
-			misp_logger.error(response)
+			self.misp_logger.error(response)
 			return response
