@@ -69,7 +69,7 @@ logger = logging.getLogger('SAMbot')
 slack_client = SlackClient(token)
 logger.info("Slack client created")
 logger.info("Connecting to misp server")
-misp = misp_custom(data['misp']['url'], data['misp']['key'])
+misp = misp_custom(data['misp']['url'], data['misp']['key'], data['misp']['ssl'])
 logger.info("Connected to misp server successfully")
 
 # starterbot's user ID in Slack: value is assigned after the bot starts up
@@ -79,6 +79,19 @@ starterbot_id = None
 RTM_READ_DELAY = 1 # 1 second delay between reading from RTM
 EXAMPLE_COMMAND = "Tell a joke"
 MENTION_REGEX = "^<@(|[WU].+?)>(.*)"
+
+def get_username(slack_event):
+	members = slack_client.api_call("users.list")['members']
+	if 'user' in slack_event:
+		logger.info(slack_event['user'])
+		for member in members:
+			if member['id'] == slack_event['user']:
+				name = member['profile']['display_name_normalized']
+				logger.info(name)
+				return name
+	else:
+		return "Unknown"
+
 
 def parse_bot_commands(slack_events):
 	"""
@@ -103,7 +116,8 @@ def parse_bot_commands(slack_events):
 						content = r.content.decode("utf-8")
 						e_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(float(event['event_ts'])))
 						e_title = e_time + " - " + strTitle
-						misp_response = misp.misp_send(0, content, e_title)
+						username = get_username(event)
+						misp_response = misp.misp_send(0, content, e_title, username)
 						return misp_response, None, event["channel"], event["user"]
 			elif event["type"] == "message" and not "subtype" in event:
 				logger.debug("Caught new method")

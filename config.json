@@ -4,6 +4,11 @@
 	},
 	"misp" : {
 		"url" : "",
+		"ssl" : true,
 		"key" : ""
+	},
+	"logging" :{
+		"output_file" : "directory/for/log.log",
+		"output_error_file": "directory/for/error.log.log"
 	}
 }
