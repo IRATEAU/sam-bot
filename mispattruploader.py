@@ -185,7 +185,7 @@ class misp_custom:
 			a,b = self.submit_to_misp(self.misp, misp_event, objects)
 			for tag in tags:
 				self.misp.tag(misp_event.uuid, tag)
-			self.misp.add_internal_text(misp_event.id, reference="Author: " + strUsername, comment=str_comment)
+			self.misp.add_internal_comment(misp_event.id, reference="Author: " + strUsername, comment=str_comment)
 			self.misp.fast_publish(misp_event.id, alert=False)
 			misp_event = self.misp.get_event(misp_event.id)
 			response = misp_event
