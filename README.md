@@ -1,5 +1,50 @@
 # sam-bot
-Bot to create MISP events from data in Slack
+SAM Bot creates MISP events from data fed to it from Slack in a code snippet.
+
+The following fields are accepted by SAMbot and will be added to the MISP event.
+ 
+ - type: 
+ - url: or kit: or creds: (it will also pickup any line with http or hxxp in it)
+ - ip: 
+ - domain: 
+ - from: or source-email: or email-source
+ - subject:  
+ - md5: 
+ - sha1: 
+ - sha256:
+ - tag: 
+ - hash|filename:
+ 
+ Accepted fields for type are:
+ 
+ - phish
+ - malware
+ - bec/scam
+ - dump
+ - apt
+ 
+Tags that are accepted are 
+ 
+ - TLP:white
+ - TLP:green
+ - TLP:amber
+ - TLP:red  
+
+### Example
+~~~shell
+type: malware
+Url: http://bad.biz/r1/asda.exe
+ip: 8.8.8.8
+domain: bad.biz
+from: phish@avalanche.ru
+subject: please transfer now
+md5: c4c17055ea16183fbb6133b6e5cfb6f9
+sha1: 17a5db6350140685d219f4f69dcc0e669a4f027e
+sha256: 6b773f5367c1a6a108537b9ee17c95314158b1de0b5195eabb9a52eaf145b90a
+hash|filename: 6b773f5367c1a6a108537b9ee17c95314158b1de0b5195eabb9a52eaf145b90a|asda.exe
+tag: tlp:RED
+~~~
+
 
 ## Installation requirements
 
