@@ -24,9 +24,12 @@ class misp_custom:
 		# go through round one and only add MISP objects
 		a = []
 		for misp_object in misp_objects:
-			logging.debug(misp_object)
+			logging.debug(dir(misp_object))
 			if len(misp_object.attributes) > 0:
-				template_id = misp.get_object_template_id(misp_object.template_uuid)
+				if misp_object.name == 'network-connection':
+					template_id = 'af16764b-f8e5-4603-9de1-de34d272f80b'
+				else:
+					logging.debug("its fucked %s" % misp_object)
 				_a = misp.add_object(misp_event.id, template_id, misp_object)
 				logging.debug(_a)
 				a.append(_a)
@@ -102,11 +105,25 @@ class misp_custom:
 			#process input
 			for line in strInput.splitlines():
 				if ("domain:" in line.lower()): #Catch domain and add to domain/IP object
+					mispobj_domainip = pymisp.MISPObject(name="domain-ip")
 					vals = line.split(":", 1)
 					mispobj_domainip.add_attribute("domain", value=vals[1].strip(), comment=str_comment)
-				elif ("ip:" in line.lower()): #Catch IP and add to domain/IP object
-					vals = line.split(":", 1)
-					mispobj_domainip.add_attribute("ip", value=vals[1].strip(), comment=str_comment)
+					objects.append(mispobj_domainip)
+				elif ("ip:" in line.lower()) or ("ip-dst:" in line.lower()) or ("ip-src:" in line.lower()): #Catch IP and add to domain/IP object
+					if "domain:" in strInput.splitlines():
+						mispobj_domainip = pymisp.MISPObject(name="domain-ip")		
+						vals = line.split(":", 1)
+						mispobj_domainip.add_attribute("ip", value=vals[1].strip(), comment=str_comment)
+						objects.append(mispobj_domainip)
+					else:
+						mispobj_network_connection = pymisp.MISPObject(name="network-connection")		
+						vals = line.split(":", 1)
+						if ("ip:" in line.lower()) or ("ip-dst:" in line.lower()):
+							mispobj_network_connection.add_attribute("ip-dst", type="ip-dst", value=vals[1].strip(), comment=str_comment)
+						else:
+							mispobj_network_connection.add_attribute("ip-src", type="ip-src", value=vals[1].strip(), comment=str_comment)
+						objects.append(mispobj_network_connection)
+					
 				elif ("source-email:" in line.lower()) or ("email-source" in line.lower()) or ("from:" in line.lower()): #Catch email and add to email object
 					vals = line.split(":", 1)
 					mispobj_email.add_attribute("from", value = vals[1].strip(), comment=str_comment)
@@ -163,7 +180,7 @@ class misp_custom:
 			#add all misp objects to List to be processed and submitted to MISP server as one.
 			objects.append(mispobj_file)
 			objects.append(mispobj_email)
-			objects.append(mispobj_domainip)
+			
 
 			for u_key, u_value in mispobj_urls.items():
 				objects.append(u_value)
