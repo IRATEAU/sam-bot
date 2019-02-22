@@ -4,6 +4,7 @@ from slackclient import SlackClient
 from pprint import pprint
 from logging.config import dictConfig
 from mispattruploader import *
+import helper
 
 
 ### Configuration loading and logging enabled.
@@ -71,7 +72,7 @@ logger.info("Slack client created")
 logger.info("Connecting to misp server")
 misp = misp_custom(data['misp']['url'], data['misp']['key'], data['misp']['ssl'])
 logger.info("Connected to misp server successfully")
-
+helperFunc = helper.TonyTheHelper(slack_client)
 # starterbot's user ID in Slack: value is assigned after the bot starts up
 starterbot_id = None
 
@@ -128,25 +129,25 @@ def parse_bot_commands(slack_events):
 					return None, message, event["channel"], user_id
 		except:
 			error = traceback.format_exc()
-			respond_channel(error, event["channel"])
+			helperFunc.respond_channel(error, event["channel"])
 	return None, None, None, None
 
-def respond(command, channel, user):
-	# This is where you start to implement more commands!
-	# Sends the response back to the channel
-	slack_client.api_call(
-		"chat.postEphemeral",
-		channel=channel,
-		text=command,
-		user=user
-	)
+# def respond(command, channel, user):
+# 	# This is where you start to implement more commands!
+# 	# Sends the response back to the channel
+# 	slack_client.api_call(
+# 		"chat.postEphemeral",
+# 		channel=channel,
+# 		text=command,
+# 		user=user
+# 	)
 
-def respond_channel(command, channel):
-	slack_client.api_call(
-		"chat.postMessage",
-		channel=channel,
-		text=command
-	)
+# def helperFunc.respond_channel(command, channel):
+# 	slack_client.api_call(
+# 		"chat.postMessage",
+# 		channel=channel,
+# 		text=command
+# 	)
 
 def parse_direct_mention(message_text):
 	"""
@@ -163,31 +164,38 @@ def tell_a_joke(command, channel, user):
 	"""
 	# Default response is help text for the user
 	default_response = "Not sure what you mean. Try *{}*.".format(EXAMPLE_COMMAND)
-
+	help_command = "Help"
 	# Finds and executes the given command, filling in response
 	response = None
 	# This is where you start to implement more commands!
 	if command.lower().startswith(EXAMPLE_COMMAND.lower()):
 		response = pyjokes.get_joke(category='all') + " This joke has been Brought to you by pyjokes."
+	elif command.lower().startswith(help_command.lower()):
+		response = helperFunc.print_help()
 	# Sends the response back to the channel
-	slack_client.api_call(
-		"chat.postMessage",
-		channel=channel,
-		text=response or default_response
-	)
+	helperFunc.respond_channel(response or default_response, channel) 
+
 
 if __name__ == "__main__":
 	if slack_client.rtm_connect(with_team_state=False, auto_reconnect=True):
 		logger.info("SAMbot connected and running!")
 		# Read bot's user ID by calling Web API method `auth.test`
 		starterbot_id = slack_client.api_call("auth.test")["user_id"]
-		while True:
-			misp_response, smartass, channel, user = parse_bot_commands(slack_client.rtm_read())
-			if misp_response:
-				respond(misp_response, channel, user)
-			elif smartass:
-				print(smartass)
-				tell_a_joke(smartass, channel, user)
-			time.sleep(RTM_READ_DELAY)
+		online = True
+		while online:
+			try:
+				misp_response, smartass, channel, user = parse_bot_commands(slack_client.rtm_read())
+				if misp_response:
+					helperFunc.respond(misp_response, channel, user)
+				elif smartass:
+					print(smartass)
+					tell_a_joke(smartass, channel, user)
+				time.sleep(RTM_READ_DELAY)
+			except Exception as e:
+				error = traceback.format_exc()
+				logger.error(error)
+				helperFunc.respond_channel("The bot has caught a fatal error. Please review the error log. Exiting now.", "#Warroom")
+				online = False
+
 	else:
 		logger.info("Connection failed. Exception traceback printed above.")

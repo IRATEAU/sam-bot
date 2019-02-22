@@ -24,14 +24,14 @@ class misp_custom:
 		# go through round one and only add MISP objects
 		a = []
 		for misp_object in misp_objects:
-			logging.debug(dir(misp_object))
+			self.misp_logger.debug(misp_object)
 			if len(misp_object.attributes) > 0:
 				if misp_object.name == 'network-connection':
 					template_id = 'af16764b-f8e5-4603-9de1-de34d272f80b'
 				else:
-					logging.debug("its fucked %s" % misp_object)
+					self.misp_logger.debug("its fucked %s" % misp_object)
 				_a = misp.add_object(misp_event.id, template_id, misp_object)
-				logging.debug(_a)
+				self.misp_logger.debug(_a)
 				a.append(_a)
 		# go through round two and add all the object references for each object
 		b = []
@@ -40,6 +40,15 @@ class misp_custom:
 				_b =misp.add_object_reference(reference)
 				b.append(_b)
 		return a,b
+
+	def check_object_length(self, misp_objects):
+		for misp_object in misp_objects:
+			self.misp_logger.info(misp_object.name)
+			self.misp_logger.info(dir(misp_object))
+			if len(misp_object.attributes) == 0:
+				self.misp_logger.error('failure to put in correct tags')
+				return False
+		return True
 
 	def get_comm_and_tags(self, strInput):
 		comment = None
@@ -194,6 +203,9 @@ class misp_custom:
 			self.misp_logger.error(response)
 			return response
 
+		if self.check_object_length(objects) != True:
+			self.misp_logger.error('Input from %s did not contain accepted tags.\n Input: \n%s' %(strUsername, strInput))
+			return "Error in the tags you entered. Please see the guide for accepted tags."
 		
 		try:
 			event = self.misp.new_event(info=strInfo, distribution='0', analysis='2', threat_level_id='3', published=True)
