@@ -29,7 +29,7 @@ class misp_custom:
 				if misp_object.name == 'network-connection':
 					template_id = 'af16764b-f8e5-4603-9de1-de34d272f80b'
 				else:
-					self.misp_logger.debug("its fucked %s" % misp_object)
+					template_id = misp.get_object_template_id(misp_object.template_uuid)
 				_a = misp.add_object(misp_event.id, template_id, misp_object)
 				self.misp_logger.debug(_a)
 				a.append(_a)
@@ -54,7 +54,9 @@ class misp_custom:
 		comment = None
 		str_comment = ""
 		tags = ["tlp:green"]
+		tag_type = None
 		for line in strInput.splitlines():
+
 			if ("comment:" in line.lower()):
 				vals = line.split(":", 1)
 				comment = vals[1:]
@@ -71,20 +73,21 @@ class misp_custom:
 				vals = line.split(":", 1)
 				value = vals[1].strip().lower()
 				if value == "phish":
-					tag = "ir8:" + value
-					tags.append(tag)
+					tag_type = value
 				elif value == "malware":
-					tag = "ir8:" + value
-					tags.append(tag)
+					tag_type = value
 				elif value == "bec/spam":
-					tag = "ir8:" + value
-					tags.append(tag)
+					tag_type = value
 				elif value == "dump":
-					tag = "ir8:" + value
-					tags.append(tag)
+					tag_type = value
 				elif (value == "apt") or (value == "APT"):
-					tag = "ir8:" + value
-					tags.append(tag)
+					tag_type = value
+		if tag_type:
+			self.misp_logger.info('Setting tag to ir8: %s' %tag_type)
+			tag = "ir8:" + tag_type
+			tags.append(tag)
+		else:
+			tags = None
 		if comment != None:
 			for c in comment:
 				str_comment += c
@@ -101,7 +104,11 @@ class misp_custom:
 			objects=[]
 			#get comments and tags from string input
 			str_comment, tags = self.get_comm_and_tags(strInput)
-
+			print(tags)
+			if tags == None:
+				self.misp_logger.info('Irate not in Tags: %s equals None' %tags)
+				response = None
+				return response
 			#setup misp objects
 			mispobj_email = pymisp.MISPObject(name="email")
 			mispobj_file = pymisp.MISPObject(name="file")
@@ -163,6 +170,7 @@ class misp_custom:
 					vals = line.split(":", 1)
 					mispobj_file.add_attribute("md5", value=vals[1].strip(), comment=str_comment)
 				elif ("subject:" in line.lower()): #or ("subject:" in line): #Catch subject and add to email object
+					self.misp_logger.info('adding subject')
 					vals = line.split(":", 1)
 					mispobj_email.add_attribute("subject", value = vals[1].strip(), comment=str_comment)
 				elif ("hash|filename:" in line.lower()): #catch hash|filename pair and add to file object
@@ -187,14 +195,18 @@ class misp_custom:
 			
 			
 			#add all misp objects to List to be processed and submitted to MISP server as one.
-			objects.append(mispobj_file)
-			objects.append(mispobj_email)
+			if len(mispobj_file.attributes) > 0:
+				objects.append(mispobj_file)
+			if len(mispobj_email.attributes) > 0:
+				objects.append(mispobj_email)
 			
 
 			for u_key, u_value in mispobj_urls.items():
-				objects.append(u_value)
+				if len(u_value.attributes) > 0:
+					objects.append(u_value)
 			for f_key, f_value in mispobj_files.items():
-				objects.append(f_value)
+				if len(f_value.attributes) > 0:
+					objects.append(f_value)
 			# Update timestamp and event
 
 		except Exception as e:
