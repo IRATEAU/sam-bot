@@ -104,7 +104,6 @@ class misp_custom:
 			objects=[]
 			#get comments and tags from string input
 			str_comment, tags = self.get_comm_and_tags(strInput)
-			print(tags)
 			if tags == None:
 				self.misp_logger.info('Irate not in Tags: %s equals None' %tags)
 				response = None
