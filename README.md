@@ -7,6 +7,8 @@ The following fields are accepted by SAMbot and will be added to the MISP event.
  - url: or kit: or creds: (it will also pickup any line with http or hxxp in it)
  - ip: 
  - domain: 
+ - ip-dst:
+ - ip-src:
  - from: or source-email: or email-source
  - subject:  
  - md5: 
@@ -35,6 +37,8 @@ Tags that are accepted are
 type: malware
 Url: http://bad.biz/r1/asda.exe
 ip: 8.8.8.8
+ip-dst: 8.8.8.8
+ip-src: 1.1.1.1
 domain: bad.biz
 from: phish@avalanche.ru
 subject: please transfer now
