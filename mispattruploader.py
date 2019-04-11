@@ -76,7 +76,7 @@ class misp_custom:
 					tag_type = value
 				elif value == "malware":
 					tag_type = value
-				elif value == "bec/spam":
+				elif value == "bec/scam":
 					tag_type = value
 				elif value == "dump":
 					tag_type = value
