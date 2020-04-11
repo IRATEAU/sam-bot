@@ -1,4 +1,4 @@
-SlackClient
+SlackClient<2.0.0
 defang
 pymisp
 pyjokes
