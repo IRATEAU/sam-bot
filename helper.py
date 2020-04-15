@@ -19,16 +19,14 @@ class TonyTheHelper:
 	def respond(self, command, channel, user):
 	# This is where you start to implement more commands!
 	# Sends the response back to the channel
-		self.slack_client.api_call(
-			"chat.postEphemeral",
+		self.slack_client.chat_postEphemeral(
 			channel=channel,
 			text=command,
 			user=user
 		)
 
 	def respond_channel(self, command, channel):
-		self.slack_client.api_call(
-			"chat.postMessage",
+		self.slack_client.chat_postMessage(
 			channel=channel,
 			text=command
 		)

@@ -3,7 +3,7 @@
 		"SLACK_BOT_TOKEN" : ""
 	},
 	"misp" : {
-		"url" : "",
+		"url" : "", #must include trailing /
 		"ssl" : true,
 		"key" : ""
 	},

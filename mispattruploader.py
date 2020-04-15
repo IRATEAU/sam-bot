@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-import logging, re, requests, argparse, pymisp, sys, time, traceback
+import logging, re, requests, argparse, sys, time, traceback
+from pymisp import MISPEvent, PyMISP, MISPObject
 from defang import refang
-from pymisp import *
 from pprint import pprint
 from urllib.parse import urlparse
 
@@ -9,7 +9,7 @@ class misp_custom:
 	
 	def __init__(self, misp_url, misp_key, misp_ssl):
 		try:
-			self.misp = pymisp.PyMISP(misp_url, misp_key, misp_ssl, 'json')
+			self.misp = PyMISP(misp_url, misp_key, misp_ssl)#, 'json')
 		except Exception as err:
 			sys.exit('Batch Job Terminated: MISP connection error - \n'+repr(err))
 		self.misp_logger = logging.getLogger('mispattruploader')
@@ -29,8 +29,16 @@ class misp_custom:
 				if misp_object.name == 'network-connection':
 					template_id = 'af16764b-f8e5-4603-9de1-de34d272f80b'
 				else:
-					template_id = misp.get_object_template_id(misp_object.template_uuid)
-				_a = misp.add_object(misp_event.id, template_id, misp_object)
+					# self.misp_logger.debug(dir(pymisp.api))
+					# self.misp_logger.debug(dir(self.misp))
+					# exit()
+					self.misp_logger.debug(misp_object.template_uuid)
+					object_template = self.misp.get_object_template(misp_object.template_uuid)
+					template_id = object_template['ObjectTemplate']['id']
+					self.misp_logger.debug(template_id)
+				self.misp_logger.debug(dir(misp_event))
+				self.misp_logger.debug(misp_event)
+				_a = misp.add_object(event=misp_event, misp_object=misp_object)
 				self.misp_logger.debug(_a)
 				a.append(_a)
 		# go through round two and add all the object references for each object
@@ -76,7 +84,7 @@ class misp_custom:
 					tag_type = value
 				elif value == "malware":
 					tag_type = value
-				elif value == "bec/scam":
+				elif value == "bec/spam":
 					tag_type = value
 				elif value == "dump":
 					tag_type = value
@@ -95,24 +103,39 @@ class misp_custom:
 			str_comment = comment
 		return str_comment, tags
 
-
+		####### SLACK ENTRY POINT! ######
 	def misp_send(self, strMISPEventID, strInput, strInfo, strUsername):
 		# Establish communication with MISP
-		
-		# The main processing block.
+		# event = MISPEvent()
+		# event.info = 'Test event'
+		# event.analysis = 0
+		# event.distribution = 3
+		# event.threat_level_id = 2
+
+		# event.add_attribute('md5', '678ff97bf16d8e1c95679c4681834c41')
+		# #<add more attributes>
+
+		# self.misp.add_event(event)
+
+		# exit()
+
+
+
+
 		try:
 			objects=[]
 			#get comments and tags from string input
 			str_comment, tags = self.get_comm_and_tags(strInput)
+			print(tags)
 			if tags == None:
 				self.misp_logger.info('Irate not in Tags: %s equals None' %tags)
 				response = None
 				return response
 			#setup misp objects
-			mispobj_email = pymisp.MISPObject(name="email")
-			mispobj_file = pymisp.MISPObject(name="file")
+			mispobj_email = MISPObject(name="email")
+			mispobj_file = MISPObject(name="file")
 			mispobj_files = {}
-			mispobj_domainip = pymisp.MISPObject(name="domain-ip")
+			mispobj_domainip = MISPObject(name="domain-ip")
 			url_no = 0
 			file_no = 0
 			mispobj_urls = {}
@@ -120,18 +143,18 @@ class misp_custom:
 			#process input
 			for line in strInput.splitlines():
 				if ("domain:" in line.lower()): #Catch domain and add to domain/IP object
-					mispobj_domainip = pymisp.MISPObject(name="domain-ip")
+					mispobj_domainip = MISPObject(name="domain-ip")
 					vals = line.split(":", 1)
 					mispobj_domainip.add_attribute("domain", value=vals[1].strip(), comment=str_comment)
 					objects.append(mispobj_domainip)
 				elif ("ip:" in line.lower()) or ("ip-dst:" in line.lower()) or ("ip-src:" in line.lower()): #Catch IP and add to domain/IP object
 					if "domain:" in strInput.splitlines():
-						mispobj_domainip = pymisp.MISPObject(name="domain-ip")		
+						mispobj_domainip = MISPObject(name="domain-ip")		
 						vals = line.split(":", 1)
 						mispobj_domainip.add_attribute("ip", value=vals[1].strip(), comment=str_comment)
 						objects.append(mispobj_domainip)
 					else:
-						mispobj_network_connection = pymisp.MISPObject(name="network-connection")		
+						mispobj_network_connection = MISPObject(name="network-connection")		
 						vals = line.split(":", 1)
 						if ("ip:" in line.lower()) or ("ip-dst:" in line.lower()):
 							mispobj_network_connection.add_attribute("ip-dst", type="ip-dst", value=vals[1].strip(), comment=str_comment)
@@ -147,7 +170,7 @@ class misp_custom:
 					url = vals[1].strip()
 					url = refang(url)
 					parsed = urlparse(url)
-					mispobj_url = pymisp.MISPObject(name="url")
+					mispobj_url = MISPObject(name="url")
 					mispobj_url.add_attribute("url", value=parsed.geturl(), category="Payload delivery", comment=str_comment)
 					if parsed.hostname:
 						mispobj_url.add_attribute("host", value=parsed.hostname, comment=str_comment)
@@ -177,7 +200,7 @@ class misp_custom:
 					val = vals[1].split("|")
 					l_hash = val[0]
 					l_filename = val[1]
-					l_mispobj_file = pymisp.MISPObject(name="file")
+					l_mispobj_file = MISPObject(name="file")
 					if len(re.findall(r"\b[a-fA-F\d]{32}\b", l_hash)) > 0:
 						l_mispobj_file.add_attribute("md5", value=l_hash.strip(), comment=str_comment)
 						l_mispobj_file.add_attribute("filename", value=l_filename.strip(), comment=str_comment)
@@ -219,15 +242,25 @@ class misp_custom:
 			return "Error in the tags you entered. Please see the guide for accepted tags."
 		
 		try:
-			event = self.misp.new_event(info=strInfo, distribution='0', analysis='2', threat_level_id='3', published=True)
+			# self.misp_logger.error(dir(self.misp))
 			misp_event = MISPEvent()
-			misp_event.load(event)
+			misp_event.info = strInfo
+			misp_event.distribution = 0
+			misp_event.analysis = 2
+			misp_event.threat_level_id = 3
+			# event.add_attribute('md5', '678ff97bf16d8e1c95679c4681834c41')
+			#event = self.misp.new_event(info=strInfo, distribution='0', analysis='2', threat_level_id='3', published=False)
+			#misp_event = MISPEvent()
+			#misp_event.load(event)
+			add = self.misp.add_event(misp_event)
+			self.misp_logger.info("Added event %s" %add)
 			a,b = self.submit_to_misp(self.misp, misp_event, objects)
 			for tag in tags:
 				self.misp.tag(misp_event.uuid, tag)
-			self.misp.add_internal_comment(misp_event.id, reference="Author: " + strUsername, comment=str_comment)
-			self.misp.fast_publish(misp_event.id, alert=False)
-			misp_event = self.misp.get_event(misp_event.id)
+			#self.misp.add_internal_comment(misp_event.id, reference="Author: " + strUsername, comment=str_comment)
+			ccc = self.misp.publish(misp_event, alert=False)
+			self.misp_logger.info(ccc)
+			misp_event = self.misp.get_event(misp_event)
 			response = misp_event
 			#for response in misp_event:            
 			if ('errors' in response and response['errors'] != None):
