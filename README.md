@@ -54,15 +54,31 @@ tag: tlp:RED
 
 #### Must use Python3
 
+
+
+
 Run the following:
 ~~~~shell
-pip3 install -r requirements.txt
+$ docker build -t sam-bot . 
+$ docker run --env-file .env \
+  -v $(pwd)/logs:/logs \
+  -v $(pwd)/machinetag.json:/var/www/MISP/app/files/taxonomies/privatetaxonomy/machinetag.json
+  sam-bot
+~~~~
+
+Or to run using already set environment variables
+~~~~
+$ docker run -v $(pwd)/logs:/logs -e SLACK_BOT_TOKEN -e MISP_URL -e MISP_KEY sam-bot
 ~~~~
 
 ### Bot Configuration:
- - Add MISP URL and API key to config.json file
- - Add Slack bot token to config.json file
- - Add log name/location to config.json (Optional)
+For dev create the following in `.env` file in project root
+~~~shell
+SLACK_BOT_TOKEN=
+MISP_URL=https://url/
+MISP_KEY=
+~~~
+more info https://docs.docker.com/compose/env-file/
 
 ### MISP requirements:
 Import the machinetag.json file as a new taxonomy 
@@ -81,16 +97,17 @@ the bot requires that the following taxonomies are enable to run
 
 
  config.json example
- ~~~~shell{
+ ~~~~json
+{
 	"slack":{
-		"SLACK_BOT_TOKEN" : "xoxb-332250278039-yQQQom0PPoRz2QufGHlTnwg7"
+		"SLACK_BOT_TOKEN": "xoxb-332250278039-yQQQom0PPoRz2QufGHlTnwg7"
 	},
-	"misp" : {
-		"url" : "https://misp.test.local",
-		"key" : "kTeD2m9yAHmuv9XYVB5vEAkrijTttwiO04LSQGAV"
+	"misp": {
+		"url": "https://misp.test.local",
+		"key": "kTeD2m9yAHmuv9XYVB5vEAkrijTttwiO04LSQGAV"
 	},
-	"logging" : {
-		"output_file" : "/var/log/this_is_the_log.log",
+	"logging": {
+		"output_file": "/var/log/this_is_the_log.log",
 		"output_error_file": "/var/log/this_is_the_error_log.log"
 
 	}

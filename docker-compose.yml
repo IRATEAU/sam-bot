@@ -1,0 +1,16 @@
+version: '2.0'
+services:
+  web:
+    image: nginx
+  sam-bot:
+    build: .
+    volumes:
+    - .:/sam-bot
+    - ./machinetag.json:/var/www/MISP/app/files/taxonomies/privatetaxonomy/machinetag.json
+    - logvolume01:/var/log
+    links:
+    - web
+    env_file:
+      - .env
+volumes:
+  logvolume01: {}
