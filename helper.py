@@ -1,32 +1,18 @@
-from logging.config import dictConfig
-import logging
+from pprint import pprint 
 
-
-
-class TonyTheHelper:
-	def __init__(self, slackclient):
-		self.slack_client = slackclient
-		self.helper_logging = logging.getLogger('TonyTheHelper')
-		self.helper_logging.info('Connected from TonyTheHelper')
-
-	def print_help(self):
-		response = """
-		>Please see the accepted fields in the Github repo
-		`https://github.com/IRATEAU/sam-bot/blob/master/README.md`
-		"""
-		return response
-
-	def respond(self, command, channel, user):
-	# This is where you start to implement more commands!
-	# Sends the response back to the channel
-		self.slack_client.chat_postEphemeral(
-			channel=channel,
-			text=command,
-			user=user
-		)
-
-	def respond_channel(self, command, channel):
-		self.slack_client.chat_postMessage(
-			channel=channel,
-			text=command
-		)
+def get_username(prog_username, slack_client, token):
+	pprint('got %s as username' %prog_username)
+	user_info = slack_client.users_info(token=token, user=prog_username)
+	pprint('Got user info as :')
+	if user_info['ok']:
+		print('ok')
+		if user_info.get('user') is not None:
+			user = user_info['user']
+			print('ok')
+			if user.get('profile') is not None:
+				profile = user['profile']
+				if profile.get('display_name') is not None:
+					print('ok')
+					username = profile['display_name']
+					print('Returning %s' %username)
+					return username
