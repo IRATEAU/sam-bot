@@ -36,6 +36,10 @@ with open(config_file) as json_data_file:
     except json.decoder.JSONDecodeError as error:
         sys.exit(f"Couldn't parse config.json: {error}")
 
+if 'testing' in data:
+    TEST_MODE = data.get('testing')
+else:
+    TEST_MODE = os.getenv('TEST_MODE', False)
 
 if 'logging' in data:
     # default to sambot.log in log dir next to script if it's not set
@@ -172,9 +176,9 @@ def handle_message(event_data):
 
     # if the incoming message contains 'hi', then respond with a 'hello message'
     elif message.get('subtype') is None and 'hi' in message.get('text'):
-        channel = message['channel']
-        message = "Hello <@%s>! :tada:" % message['user']
-        slack_client.chat_postMessage(channel=channel, text=message)
+        logger.debug(f"Hi message from {message.get('user')} in {message.get('channel')}")
+        response = f"Hello <@{message.get('user')}>! :tada:"
+        slack_client.chat_postMessage(channel=message.get('channel'), text=response)
         return_value = '', 200
     # shouldn't get here, but return a 403 if you do.
     return_value = 'Unhandled message type', 403
@@ -185,6 +189,22 @@ def error_handler(err):
     """ slack error message handler """
     logger.error("Slack error: %s", str(err))
 
+def find_channel_id(slack_client, channel_name='_autobot'):
+    """ returns the channel ID of the channel """
+    for channel in slack_client.conversations_list().get('channels'):
+        if channel.get('name') == channel_name:
+            logger.debug(f"found channel id for {channel_name}: {channel.get('id')}")
+            return channel.get('id')
+    return False
+
 if __name__ == '__main__':
     slack_client = slack.WebClient(slack_bot_token)
+    
+    if TEST_MODE:
+        BOT_CHANNEL = find_channel_id(slack_client, '_autobot')
+        slack_client.conversations_join(channel=BOT_CHANNEL)
+        slack_client.chat_postMessage(channel=BOT_CHANNEL, text="I've starting up in test mode!")
+
+    for channel in slack_client.conversations_list().get('channels'):
+        logger.debug(channel)
     slack_events_adapter.start(port=3000, host='0.0.0.0')
