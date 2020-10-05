@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  sambot:
+    container_name: sambot
+    build:
+        context: .
+    ports:
+      - 3000:3000
+    volumes:
+      - logs:/code/logs/
+volumes:
+  logs:
