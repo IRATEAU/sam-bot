@@ -111,7 +111,7 @@ except Exception:
 # config file - slack section
 if not data.get('slack'):
     logger.error("No 'slack' config section, quitting.")
-    sys.exit()
+    sys.exit(1)
 
 MISSED_SLACK_KEY = False
 for key in ('SLACK_BOT_OAUTH_TOKEN', 'SLACK_SIGNING_SECRET'):
@@ -119,7 +119,7 @@ for key in ('SLACK_BOT_OAUTH_TOKEN', 'SLACK_SIGNING_SECRET'):
         MISSED_SLACK_KEY = True
         logger.error("Couldn't find %s in config.json slack section, going to quit.", key)
 if MISSED_SLACK_KEY:
-    sys.exit()
+    sys.exit(1)
 else:
     slack_bot_token = data['slack']['SLACK_BOT_OAUTH_TOKEN']
     slack_signing_secret = data['slack']['SLACK_SIGNING_SECRET']
