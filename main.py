@@ -106,7 +106,7 @@ try:
 except Exception:
     logger.error('Failed to connect to MISP:')
     logger.error(traceback.format_exc())
-    sys.exit()
+    sys.exit(1)
 
 # config file - slack section
 if not data.get('slack'):
