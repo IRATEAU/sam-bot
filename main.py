@@ -24,8 +24,6 @@ import slack.errors
 from slackeventsapi import SlackEventAdapter
 from mispattruploader import MispCustomConnector
 
-import helper
-
 dir_path = os.path.dirname(os.path.realpath(__file__))
 config_file = dir_path + '/config.json'
 
@@ -127,6 +125,20 @@ else:
 
 slack_events_adapter = SlackEventAdapter(slack_signing_secret, '/slack/events')
 
+def get_username(prog_username, slack_client, token):
+    """ pulls the slack username from the event """
+    logger.debug('Got %s as username', prog_username)
+    user_info = slack_client.users_info(token=token, user=prog_username)
+    if user_info.get('ok'):
+        if user_info.get('user') is not None:
+            user = user_info['user']
+            if user.get('profile') is not None:
+                profile = user['profile']
+                if profile.get('display_name') is not None:
+                    username = profile['display_name']
+                    logger.debug('Returning %s', username)
+                    return username
+    return False
 
 def file_handler(event):
     """ handles files from slack client """
@@ -150,7 +162,7 @@ def file_handler(event):
 
             e_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(float(event['event_ts'])))
             e_title = f"{e_time} - {event_title}"
-            username = helper.get_username(event.get('user'), slack_client, slack_bot_token)
+            username = get_username(event.get('user'), slack_client, slack_bot_token)
             logger.info(username)
             logger.info(e_title)
             logger.info(content)
