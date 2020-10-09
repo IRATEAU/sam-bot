@@ -17,6 +17,7 @@ import time
 import traceback
 import threading
 
+import git
 import requests
 import flask
 import slack
@@ -176,22 +177,40 @@ def file_handler(event):
 @slack_events_adapter.on('message')
 def handle_message(event_data):
     """ slack message handler """
-    logger.info('Got message from slack')
+    logger.info('handle_message Got message from slack')
     logger.info(event_data)
     message = event_data.get('event')
+
+    logger.info(f"Message type: {message.get('type')}")
+    logger.info(f"Message text: {message.get('text')}")
     if message.get('files'):
+        logger.info("Files message")
         file_info = message
         thread_object = threading.Thread(target=file_handler, args=(file_info,))
         thread_object.start()
         #file_handler(file_info)
         return_value = flask.Response('', headers={'X-Slack-No-Retry': 1}), 200
-
     # if the incoming message contains 'hi', then respond with a 'hello message'
+    elif message.get('type') is 'message' and 'sambot git update' in message.get('text'):
+        logger.info(f"Git pull message from {message.get('user')} in {message.get('channel')}")
+
+        response = f"Doing a git pull now..."
+        slack_client.chat_postMessage(channel=message.get('channel'), text=response)
+
+        git_repo = git.cmd.Git(os.path.dirname(os.path.realpath(__file__)))
+        git_result = git.pull()
+
+        response = f"Done!\n```{git_result}```"
+        slack_client.chat_postMessage(channel=message.get('channel'), text=response)
+
+        return_value = '', 200
     elif message.get('subtype') is None and 'hi' in message.get('text'):
-        logger.debug(f"Hi message from {message.get('user')} in {message.get('channel')}")
+        logger.info(f"Hi message from {message.get('user')} in {message.get('channel')}")
         response = f"Hello <@{message.get('user')}>! :tada:"
         slack_client.chat_postMessage(channel=message.get('channel'), text=response)
         return_value = '', 200
+    else:
+        logger.info("Message fell through...")
     # shouldn't get here, but return a 403 if you do.
     return_value = 'Unhandled message type', 403
     return return_value
@@ -215,7 +234,8 @@ if __name__ == '__main__':
     if TEST_MODE:
         BOT_CHANNEL = find_channel_id(slack_client, '_autobot')
         slack_client.conversations_join(channel=BOT_CHANNEL)
-        slack_client.chat_postMessage(channel=BOT_CHANNEL, text="I've starting up in test mode!")
+        #slack_client.chat_postMessage(channel=BOT_CHANNEL, text="I've starting up in test mode!")
+        logger.debug("I've started up in test mode...")
 
     for channel in slack_client.conversations_list().get('channels'):
         logger.debug(channel)

@@ -9,5 +9,7 @@ services:
       - 3000:3000
     volumes:
       - logs:/code/logs/
+    environment:
+      - TEST_MODE=1
 volumes:
   logs:

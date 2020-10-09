@@ -98,3 +98,15 @@ If you don't specify a `logging` config, it'll default to putting logs in './log
     }
 }
 ~~~~
+
+# Development
+
+Set up a slack app, follow instructions in the git repo here: https://github.com/slackapi/python-slack-events-api/tree/main/example
+
+## Event Subscriptions
+
+It needs to sub to the following events:
+
+- message.channels
+- file_created
+- file_shared

@@ -5,15 +5,16 @@ FROM python:3.8
 ENV PYTHONUNBUFFERED 1
 ENV PYTHONDONTWRITEBYTECODE 1
 
-# Make a new directory to put our code in.
-RUN mkdir /code
+RUN git clone https://github.com/yaleman/sam-bot /code/
 
 WORKDIR /code
 
-COPY requirements.txt /code/
+RUN git checkout docker
+
 RUN pip install -r requirements.txt
 
-COPY *.py /code/
+
+#COPY *.py /code/
 COPY config.json /code/
 
 CMD python main.py
