@@ -110,3 +110,9 @@ It needs to sub to the following events:
 - message.channels
 - file_created
 - file_shared
+
+## Oauth Scopes required
+
+- users:read
+- links:read
+- files:read

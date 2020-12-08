@@ -58,15 +58,16 @@ class MispCustomConnector:
                 # add the reference and get the result
                 result = misp.add_object_reference(reference)
                 misp_object_references.append(result)
-        return misp_objects,misp_object_references
+        return misp_objects, misp_object_references
 
     def check_object_length(self, misp_objects: list):
         """ check object has some attributes """
+        self.misp_logger.info("check_object_length called")
         for misp_object in misp_objects:
-            self.misp_logger.info(misp_object.name)
-            self.misp_logger.info(dir(misp_object))
+            self.misp_logger.info("got object: %s", misp_object.name)
+            #self.misp_logger.info(dir(misp_object))
             if len(misp_object.attributes) == 0:
-                self.misp_logger.error('failure to put in correct tags')
+                self.misp_logger.error('failed to put in correct tags')
                 return False
         return True
 
@@ -191,8 +192,8 @@ class MispCustomConnector:
                     vals = line.split(":", 1)
                     mispobj_file.add_attribute("md5", value=vals[1].strip(), comment=str_comment)
                 elif "subject:" in line.lower(): #or ("subject:" in line): #Catch subject and add to email object
-                    self.misp_logger.info('adding subject')
                     vals = line.split(":", 1)
+                    self.misp_logger.info(f"adding subject: {vals[1].strip()}")
                     mispobj_email.add_attribute("subject", value = vals[1].strip(), comment=str_comment)
                 elif "hash|filename:" in line.lower(): #catch hash|filename pair and add to file object
                     vals = line.split(":", 1)
@@ -231,13 +232,13 @@ class MispCustomConnector:
 
         except Exception as e:
             error = traceback.format_exc()
-            response = "Error occured when converting string to misp objects:\n %s" %error
+            response = f"Error occured when converting string to misp objects:\n{error}"
             self.misp_logger.error(response)
             return response
 
         if not self.check_object_length(objects):
-            self.misp_logger.error('Input from %s did not contain accepted tags.\n Input: \n%s' % (strUsername, strInput))
-            return "Error in the tags you entered. Please see the guide for accepted tags."
+            self.misp_logger.error('Input from %s did not contain accepted tags.\n Input: \n%s', (strUsername, strInput))
+            return "Error in the tags you entered. Please see the guide for accepted tags: (https://github.com/IRATEAU/sam-bot/blob/master/README.md)"
 
         try:
             # self.misp_logger.error(dir(self.misp))
@@ -251,30 +252,36 @@ class MispCustomConnector:
             #misp_event = MISPEvent()
             #misp_event.load(event)
             add = self.misp.add_event(misp_event)
-            self.misp_logger.info("Added event %s" %add)
-            a,b = self.submit_to_misp(self.misp, misp_event, objects)
-            for tag in tags:
-                self.misp.tag(misp_event.uuid, tag)
-            #self.misp.add_internal_comment(misp_event.id, reference="Author: " + strUsername, comment=str_comment)
-            ccc = self.misp.publish(misp_event, alert=False)
-            self.misp_logger.info(ccc)
-            misp_event = self.misp.get_event(misp_event)
-            response = misp_event
+            self.misp_logger.info("Added event %s", add)
 
-            if 'errors' in response and response.get('errors'):
-                return_value = ("Submission error: "+repr(response.get('errors')))
+            if objects:
+                self.misp_logger.info("Adding objects to event...")
+                objects, references = self.submit_to_misp(self.misp, misp_event, objects)
+                self.misp_logger.info("References: %s", references)
+            
+            for tag in tags:
+                self.misp_logger.info("Adding tag %s", tag)
+                self.misp.tag(misp_event.uuid, tag)
+
+            #self.misp.add_internal_comment(misp_event.id, reference="Author: " + strUsername, comment=str_comment)
+            self.misp_logger.info("Publishing event...")
+            publish_result = self.misp.publish(misp_event, alert=False)
+            self.misp_logger.info("Publish result: %s", publish_result)
+
+            if 'errors' in publish_result and publish_result.get('errors'):
+                return_value = ("Submission error: "+repr(publish_result.get('errors')))
             else:
-                if response['Event']['RelatedEvent']:
+                if misp_event.get('Event',{}).get('RelatedEvent'):
                     e_related = ""
-                    for each in response['Event']['RelatedEvent']:
+                    for each in misp_event['Event']['RelatedEvent']:
                         e_related = e_related + each['Event']['id'] + ", "
-                    return_value = "Created ID: " + str(response['Event']['id']) + "\nRelated Events: " + ''.join(e_related)
+                    return_value = "Created ID: " + str(misp_event['Event']['id']) + "\nRelated Events: " + ''.join(e_related)
                 else:
-                    return_value = "Created ID: " + str(response['Event']['id'])
+                    return_value = "Created ID: " + str(misp_event['Event']['id'])
             return return_value
 
         except Exception as e:
             error = traceback.format_exc()
-            response = "Error occured when submitting to misp:\n %s" %error
+            response = "Error occured when submitting to MISP:\n %s" %error
             self.misp_logger.error(response)
             return response

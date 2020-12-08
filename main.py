@@ -190,20 +190,20 @@ def handle_message(event_data):
         thread_object.start()
         #file_handler(file_info)
         return_value = flask.Response('', headers={'X-Slack-No-Retry': 1}), 200
+    # elif str(message.get('type')) == 'message' and str(message.get('text')) == 'sambot git update':
+    #     logger.info(f"Git pull message from {message.get('user')} in {message.get('channel')}")
+
+    #     response = f"Doing a git pull now..."
+    #     slack_client.chat_postMessage(channel=message.get('channel'), text=response)
+
+    #     git_repo = git.cmd.Git(os.path.dirname(os.path.realpath(__file__)))
+    #     git_result = git_repo.pull()
+
+    #     response = f"Done!\n```{git_result}```"
+    #     slack_client.chat_postMessage(channel=message.get('channel'), text=response)
+
+    #     return_value = '', 200
     # if the incoming message contains 'hi', then respond with a 'hello message'
-    elif message.get('type') is 'message' and 'sambot git update' in message.get('text'):
-        logger.info(f"Git pull message from {message.get('user')} in {message.get('channel')}")
-
-        response = f"Doing a git pull now..."
-        slack_client.chat_postMessage(channel=message.get('channel'), text=response)
-
-        git_repo = git.cmd.Git(os.path.dirname(os.path.realpath(__file__)))
-        git_result = git.pull()
-
-        response = f"Done!\n```{git_result}```"
-        slack_client.chat_postMessage(channel=message.get('channel'), text=response)
-
-        return_value = '', 200
     elif message.get('subtype') is None and 'hi' in message.get('text'):
         logger.info(f"Hi message from {message.get('user')} in {message.get('channel')}")
         response = f"Hello <@{message.get('user')}>! :tada:"

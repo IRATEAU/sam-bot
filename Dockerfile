@@ -5,11 +5,13 @@ FROM python:3.8
 ENV PYTHONUNBUFFERED 1
 ENV PYTHONDONTWRITEBYTECODE 1
 
-RUN git clone https://github.com/yaleman/sam-bot /code/
+#RUN git clone https://github.com/yaleman/sam-bot /code/
 
 WORKDIR /code
 
-RUN git checkout docker
+COPY ./ /code/
+
+#RUN git checkout docker
 
 RUN pip install -r requirements.txt
 
