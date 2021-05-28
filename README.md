@@ -79,20 +79,40 @@ the bot requires that the following taxonomies are enable to run
  - TLP
  - IR8
 
+If you don't specify a `logging` config, it'll default to putting logs in './logs/', which is the log volume for docker.
 
  config.json example
- ~~~~shell{
-	"slack":{
-		"SLACK_BOT_TOKEN" : "xoxb-332250278039-yQQQom0PPoRz2QufGHlTnwg7"
-	},
-	"misp" : {
-		"url" : "https://misp.test.local",
-		"key" : "kTeD2m9yAHmuv9XYVB5vEAkrijTttwiO04LSQGAV"
-	},
-	"logging" : {
-		"output_file" : "/var/log/this_is_the_log.log",
-		"output_error_file": "/var/log/this_is_the_error_log.log"
-
-	}
+ ~~~~shell
+{
+    "slack":{
+        "SLACK_BOT_OAUTH_TOKEN" : "xoxb-332250278039-yQQQom0PPoRz2QufGHlTnwg7",
+        "SLACK_SIGNING_SECRET" : "sadfasdfasfasfasdfsadfasdfafasdfasdfasd"
+    },
+    "misp" : {
+        "url" : "https://misp.test.local",
+        "key" : "asdfasdfsadfasfsadfsadfsdfdsafasdfasfasfasdfasdfsadf"
+    },
+    "logging" : {
+        "output_file" : "sambot.log",
+        "output_error_file": "sambot_error.log"
+    }
 }
 ~~~~
+
+# Development
+
+Set up a slack app, follow instructions in the git repo here: https://github.com/slackapi/python-slack-events-api/tree/main/example
+
+## Event Subscriptions
+
+It needs to sub to the following events:
+
+- message.channels
+- file_created
+- file_shared
+
+## Oauth Scopes required
+
+- users:read
+- links:read
+- files:read

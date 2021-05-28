@@ -103,5 +103,8 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-#exclude json files
+# exclude json files
 *.json
+
+# exclude logs
+logs/*
