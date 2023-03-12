@@ -112,7 +112,7 @@ class MispCustomConnector:
             tags.append(tag)
         else:
             tags = None
-        if comment != None:
+        if comment is not None:
             for c in comment:
                 str_comment += c
         else:
@@ -230,7 +230,7 @@ class MispCustomConnector:
                     objects.append(f_value)
             # Update timestamp and event
 
-        except Exception as e:
+        except Exception:
             error = traceback.format_exc()
             response = f"Error occured when converting string to misp objects:\n{error}"
             self.misp_logger.error(response)
@@ -258,7 +258,7 @@ class MispCustomConnector:
                 self.misp_logger.info("Adding objects to event...")
                 objects, references = self.submit_to_misp(self.misp, misp_event, objects)
                 self.misp_logger.info("References: %s", references)
-            
+
             for tag in tags:
                 self.misp_logger.info("Adding tag %s", tag)
                 self.misp.tag(misp_event.uuid, tag)
@@ -280,8 +280,8 @@ class MispCustomConnector:
                     return_value = "Created ID: " + str(misp_event['Event']['id'])
             return return_value
 
-        except Exception as e:
+        except Exception: #pylint: disable=broad-except
             error = traceback.format_exc()
-            response = "Error occured when submitting to MISP:\n %s" %error
+            response = f"Error occured when submitting to MISP:\n {error}"
             self.misp_logger.error(response)
             return response

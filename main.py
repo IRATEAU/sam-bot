@@ -17,7 +17,7 @@ import time
 import traceback
 import threading
 
-import git
+# import git
 import requests
 import flask
 import slack
@@ -29,7 +29,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 config_file = dir_path + '/config.json'
 
 # parse config file
-with open(config_file) as json_data_file:
+with open(config_file, encoding="utf-8") as json_data_file:
     try:
         data = json.load(json_data_file)
     except json.decoder.JSONDecodeError as error:
@@ -181,8 +181,8 @@ def handle_message(event_data):
     logger.info(event_data)
     message = event_data.get('event')
 
-    logger.info(f"Message type: {message.get('type')}")
-    logger.info(f"Message text: {message.get('text')}")
+    logger.info("Message type: %s", message.get('type'))
+    logger.info("Message text: %s", message.get('text'))
     if message.get('files'):
         logger.info("Files message")
         file_info = message
@@ -229,14 +229,19 @@ def find_channel_id(slack_client, channel_name='_autobot'):
     return False
 
 if __name__ == '__main__':
-    slack_client = slack.WebClient(slack_bot_token)
-    
-    if TEST_MODE:
-        BOT_CHANNEL = find_channel_id(slack_client, '_autobot')
-        slack_client.conversations_join(channel=BOT_CHANNEL)
-        #slack_client.chat_postMessage(channel=BOT_CHANNEL, text="I've starting up in test mode!")
-        logger.debug("I've started up in test mode...")
+    try:
+        slack_client = slack.WebClient(slack_bot_token)
 
-    for channel in slack_client.conversations_list().get('channels'):
-        logger.debug(channel)
-    slack_events_adapter.start(port=3000, host='0.0.0.0')
+        if TEST_MODE:
+            BOT_CHANNEL = find_channel_id(slack_client, '_autobot')
+            slack_client.conversations_join(channel=BOT_CHANNEL)
+            #slack_client.chat_postMessage(channel=BOT_CHANNEL, text="I've starting up in test mode!")
+            logger.debug("I've started up in test mode...")
+
+        for channel in slack_client.conversations_list().get('channels'):
+            logger.debug(channel)
+        slack_events_adapter.start(port=3000, host='0.0.0.0')
+
+    except KeyboardInterrupt:
+        slack_client.stop()
+        sys.exit(0)
