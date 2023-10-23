@@ -21,7 +21,7 @@ class MispCustomConnector:
             sys.exit('Batch Job Terminated: MISP connection error - \n'+repr(err))
         self.misp_logger = logging.getLogger('mispattruploader')
 
-    def submit_to_misp(self, misp: PyMISP, misp_event: MISPEvent, misp_objects: list):
+    def submit_to_misp(self, misp: PyMISP, misp_event: MISPEvent, original_misp_objects: list):
         '''
         Submit a list of MISP objects to a MISP event
         :misp: PyMISP API object for interfacing with MISP
@@ -30,8 +30,8 @@ class MispCustomConnector:
         '''
         # go through round one and only add MISP objects
         misp_objects = []
-        for misp_object in misp_objects:
-            self.misp_logger.debug(misp_object)
+        for misp_object in original_misp_objects:
+            self.misp_logger.info(misp_object)
             if len(misp_object.attributes) > 0:
                 if misp_object.name == 'network-connection':
                     template_id = 'af16764b-f8e5-4603-9de1-de34d272f80b'
@@ -39,25 +39,30 @@ class MispCustomConnector:
                     # self.misp_logger.debug(dir(pymisp.api))
                     # self.misp_logger.debug(dir(self.misp))
                     # exit()
-                    self.misp_logger.debug(misp_object.template_uuid)
+                    self.misp_logger.info(misp_object)
+                    self.misp_logger.info(misp_object.template_uuid)
                     object_template = self.misp.get_object_template(misp_object.template_uuid)
+                    self.misp_logger.info("MISP Object Template: " + str(object_template))
                     template_id = object_template['ObjectTemplate']['id']
-                    self.misp_logger.debug(template_id)
-                self.misp_logger.debug(dir(misp_event))
-                self.misp_logger.debug(misp_event)
+                    self.misp_logger.info(template_id)
+                # self.misp_logger.info(dir(misp_event))
+                self.misp_logger.info(misp_event)
 
                 # add the object and get the result
                 result = misp.add_object(event=misp_event, misp_object=misp_object)
-                self.misp_logger.debug(result)
+                self.misp_logger.info("MISP Add Object Result" + str(result))
                 misp_objects.append(result)
         # go through round two and add all the object references for each object
         misp_object_references = []
         for misp_object in misp_objects:
-            for reference in misp_object.ObjectReference:
+            self.misp_logger.info("MISP Object Result" + str(misp_object))
+            if 'ObjectReference' in misp_object: ## this doesnt seem to happen
+            # TODO - Fix this.
+                for reference in misp_object.ObjectReference:
 
-                # add the reference and get the result
-                result = misp.add_object_reference(reference)
-                misp_object_references.append(result)
+                    # add the reference and get the result
+                    result = misp.add_object_reference(reference)
+                    misp_object_references.append(result)
         return misp_objects, misp_object_references
 
     def check_object_length(self, misp_objects: list):
@@ -65,7 +70,6 @@ class MispCustomConnector:
         self.misp_logger.info("check_object_length called")
         for misp_object in misp_objects:
             self.misp_logger.info("got object: %s", misp_object.name)
-            #self.misp_logger.info(dir(misp_object))
             if len(misp_object.attributes) == 0:
                 self.misp_logger.error('failed to put in correct tags')
                 return False
@@ -96,16 +100,6 @@ class MispCustomConnector:
                 value = vals[1].strip().lower()
                 if value in ('phish', 'malware', 'bec/spam', 'dump', 'apt', 'APT'):
                     tag_type = value.lower()
-                # if value == "phish":
-                #     tag_type = value
-                # elif value == "malware":
-                #     tag_type = value
-                # elif value == "bec/spam":
-                #     tag_type = value
-                # elif value == "dump":
-                #     tag_type = value
-                # elif (value == "apt") or (value == "APT"):
-                #     tag_type = value
         if tag_type:
             self.misp_logger.info('Setting tag to ir8: %s', tag_type)
             tag = "ir8:" + tag_type
@@ -241,19 +235,13 @@ class MispCustomConnector:
             return "Error in the tags you entered. Please see the guide for accepted tags: (https://github.com/IRATEAU/sam-bot/blob/master/README.md)"
 
         try:
-            # self.misp_logger.error(dir(self.misp))
             misp_event = MISPEvent()
             misp_event.info = strInfo
             misp_event.distribution = 0
             misp_event.analysis = 2
             misp_event.threat_level_id = 3
-            # event.add_attribute('md5', '678ff97bf16d8e1c95679c4681834c41')
-            #event = self.misp.new_event(info=strInfo, distribution='0', analysis='2', threat_level_id='3', published=False)
-            #misp_event = MISPEvent()
-            #misp_event.load(event)
             add = self.misp.add_event(misp_event)
             self.misp_logger.info("Added event %s", add)
-
             if objects:
                 self.misp_logger.info("Adding objects to event...")
                 objects, references = self.submit_to_misp(self.misp, misp_event, objects)
@@ -275,9 +263,9 @@ class MispCustomConnector:
                     e_related = ""
                     for each in misp_event['Event']['RelatedEvent']:
                         e_related = e_related + each['Event']['id'] + ", "
-                    return_value = "Created ID: " + str(misp_event['Event']['id']) + "\nRelated Events: " + ''.join(e_related)
+                    return_value = "Created ID: " + publish_result.get('id') + "\nRelated Events: " + ''.join(e_related)
                 else:
-                    return_value = "Created ID: " + str(misp_event['Event']['id'])
+                    return_value = "Created ID: " + publish_result.get('id')
             return return_value
 
         except Exception as e:

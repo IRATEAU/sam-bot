@@ -23,7 +23,7 @@ import flask
 import slack
 import slack.errors
 from slackeventsapi import SlackEventAdapter
-from mispattruploader import MispCustomConnector
+from misp import MispCustomConnector
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 config_file = dir_path + '/config.json'
@@ -95,7 +95,7 @@ logger = logging.getLogger('SAMbot')
 
 # connecting to MISP
 try:
-    misp = MispCustomConnector(misp_url=data['misp']['url'],
+    misp_object = MispCustomConnector(misp_url=data['misp']['url'],
                        misp_key=data['misp']['key'],
                        misp_ssl=data.get('misp', {}).get('ssl', True), # default to using SSL
                        )
@@ -164,10 +164,10 @@ def file_handler(event):
             e_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(float(event['event_ts'])))
             e_title = f"{e_time} - {event_title}"
             username = get_username(event.get('user'), slack_client, slack_bot_token)
-            logger.info(username)
-            logger.info(e_title)
-            logger.info(content)
-            misp_response = misp.misp_send(0, content, e_title, username)
+            # logger.info(username)
+            # logger.info(e_title)
+            # logger.info(content)
+            misp_response = misp_object.misp_send(0, content, e_title, username)
             slack_client.chat_postEphemeral(
                 channel=event.get('channel'),
                 text=misp_response,
