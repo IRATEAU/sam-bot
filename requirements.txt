@@ -1,7 +1,7 @@
 defang==0.5.3
 Flask==3.0.0
-GitPython==3.1.40
-GitPython==3.1.40
+GitPython==3.1.41
+GitPython==3.1.41
 nest_asyncio==1.5.8
 pyjokes==0.6.0
 pymisp==2.4.176
