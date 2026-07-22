@@ -39,13 +39,19 @@ def get_keys(lines: List[str]) -> List[str]:
 class MispCustomConnector:
     """custom MISP connector"""
 
-    def __init__(self, misp_url: str, misp_key: str, misp_ssl: bool) -> None:
+    def __init__(
+        self, misp_url: str, misp_key: str, misp_ssl: bool, debug: bool = False
+    ) -> None:
         try:
             # https://pymisp.readthedocs.io/en/latest/modules.html#pymisp
             self.misp = PyMISP(misp_url, misp_key, misp_ssl)
         except Exception as err:
             sys.exit("Batch Job Terminated: MISP connection error - \n" + repr(err))
         self.misp_logger = logging.getLogger("mispattruploader")
+        if debug:
+            self.misp_logger.setLevel(logging.DEBUG)
+        else:
+            self.misp_logger.setLevel(logging.INFO)
 
     def submit_to_misp(
         self,
