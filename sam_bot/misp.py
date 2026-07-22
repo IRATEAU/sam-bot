@@ -13,6 +13,29 @@ from pymisp import MISPEvent, PyMISP, MISPObject, MISPObjectReference
 from defang import refang  # type: ignore[import-untyped]
 
 
+def has_tlp(tags: Set[str]) -> bool:
+    """check if tags contain a TLP tag"""
+    for tag in tags:
+        if tag.lower().startswith("tlp:"):
+            return True
+    return False
+
+
+def get_key_values(lines: List[str]) -> List[Tuple[str, str]]:
+    """get key value pairs from lines"""
+    key_value_pairs = []
+    for line in lines:
+        if ":" in line:
+            key, value = line.split(":", 1)
+            key_value_pairs.append((key.lower().strip(), value.strip()))
+    return key_value_pairs
+
+
+def get_keys(lines: List[str]) -> List[str]:
+    """get tag keys from lines"""
+    return [key for (key, _value) in get_key_values(lines)]
+
+
 class MispCustomConnector:
     """custom MISP connector"""
 
