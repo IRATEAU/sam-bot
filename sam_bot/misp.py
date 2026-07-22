@@ -169,7 +169,6 @@ class MispCustomConnector:
             mispobj_email = MISPObject(name="email")
             mispobj_file = MISPObject(name="file")
             mispobj_files = {}
-            mispobj_domainip = MISPObject(name="domain-ip")
             url_no = 0
             file_no = 0
             mispobj_urls = {}

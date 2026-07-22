@@ -209,7 +209,7 @@ def handle_message(event_data: Dict[str, Any]) -> Tuple[flask.Response, int]:
 
     #     return_value = '', 200
     # if the incoming message contains 'hi', then respond with a 'hello message'
-    elif message.get("subtype") is None and "hi" in message.get("text"):
+    elif message.get("subtype") is None and "hi" in message.get("text").lower().split():
         logger.info(
             f"Hi message from {message.get('user')} in {message.get('channel')}"
         )
