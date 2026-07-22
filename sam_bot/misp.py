@@ -73,9 +73,6 @@ class MispCustomConnector:
                 if misp_object.name == "network-connection":
                     template_id = "af16764b-f8e5-4603-9de1-de34d272f80b"
                 else:
-                    # self.misp_logger.debug(dir(pymisp.api))
-                    # self.misp_logger.debug(dir(self.misp))
-                    # exit()
                     self.misp_logger.info(misp_object)
                     self.misp_logger.info(misp_object.template_uuid)
                     object_template = self.misp.get_object_template(
