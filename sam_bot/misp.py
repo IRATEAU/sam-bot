@@ -89,39 +89,40 @@ class MispCustomConnector:
 
     def get_comm_and_tags(self, strInput: str) -> Tuple[str | None, List[str]]:
         """pull comments and tags from input"""
-        comment = None
-        str_comment = ""
-        tags: List[str] = ["tlp:green"]
-        tag_type = None
-        for line in strInput.splitlines():
-            if "comment:" in line.lower():
-                vals = line.split(":", 1)
-                comment = vals[1:]
-            elif "tag:" in line.lower():
-                vals = line.split(":", 1)
-                value = vals[1].strip().lower()
-                if "tlp" in value:
-                    tags.remove("tlp:green")
-                    vals_str = "tlp:"
-                    vals_split = vals[1].split(":")
-                    vals_str += vals_split[1]
-                    tags.append(vals_str)
-            elif "type:" in line.lower():
-                vals = line.split(":", 1)
-                value = vals[1].strip().lower()
+        comment = []
+        tags: Set[str] = set()
+
+        for key, value in get_key_values(strInput.splitlines()):
+            value = value.strip()
+            key = key.lower().strip()
+            if key == "comment":
+                comment.append(value)
+            elif key == "tag":
+                if value.lower().startswith("tlp:"):
+                    # remove any existing TLP tags and add the new one
+                    tags = set(
+                        [tag for tag in tags if not tag.lower().startswith("tlp:")]
+                    )
+
+                    tags.add(value.lower().strip())
+                else:
+                    tags.add(value)
+            elif key == "type":
+                value = value.lower().strip()
                 if value in ("phish", "malware", "bec/spam", "dump", "apt", "APT"):
-                    tag_type = value.lower()
-        if tag_type:
-            self.misp_logger.info("Setting tag to ir8: %s", tag_type)
-            tag = "ir8:" + tag_type
-            tags.append(tag)
-        else:
-            tags = list()
-        if comment is None:
-            str_comment = ""
-        else:
-            str_comment = "".join(comment)
-        return str_comment, tags
+                    tag = f"ir8:{value}"
+                    self.misp_logger.info("Setting tag to %s", tag)
+                    tags.add(tag)
+                else:
+                    self.misp_logger.error("Invalid 'type' tag: %s", value)
+            else:
+                self.misp_logger.info(
+                    f"Get_comm_and_tags Ignoring input line: {key=}: {value=}"
+                )
+        if not has_tlp(tags):
+            tags.add("tlp:green")
+
+        return "".join(comment), list(tags)
 
         ####### SLACK ENTRY POINT! ######
 
