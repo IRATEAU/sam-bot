@@ -224,9 +224,9 @@ def handle_message(event_data: Dict[str, Any]) -> Tuple[flask.Response, int]:
         )
         return_value = flask.Response(""), 200
     else:
-        logger.info("Message fell through...")
-    # shouldn't get here, but return a 403 if you do.
-    return_value = flask.Response("Unhandled message type"), 403
+        logger.info("Message fell through, returning 403...")
+        # shouldn't get here, but return a 403 if you do.
+        return_value = flask.Response("Unhandled message type"), 403
     return return_value
 
 
