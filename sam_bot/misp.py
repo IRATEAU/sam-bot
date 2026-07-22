@@ -2,7 +2,7 @@
 
 """MISP custom connector and general handler"""
 
-from typing import List, Sequence, Tuple
+from typing import List, Sequence, Tuple, Set, Optional
 import sys
 import traceback
 import logging
@@ -90,7 +90,7 @@ class MispCustomConnector:
                 result = misp.add_object(event=misp_event, misp_object=misp_object)
 
                 self.misp_logger.info("MISP Add Object Result" + str(result))
-                misp_objects.append(result)  # type: ignore[arg-type]
+                misp_objects.append(result)  # type: ignore[arg-type] # ty: ignore[invalid-argument-type]
         # go through round two and add all the object references for each object
         misp_object_references = []
         for misp_object in misp_objects:
@@ -101,7 +101,7 @@ class MispCustomConnector:
                     # add the reference and get the result
                     result = misp.add_object_reference(reference)  # type: ignore[assignment]
                     misp_object_references.append(result)
-        return misp_objects, misp_object_references  # type: ignore[return-value]
+        return misp_objects, misp_object_references  # type: ignore[return-value] # ty: ignore[invalid-return-type]
 
     def check_object_length(self, misp_objects: List[MISPObject]) -> bool:
         """check object has some attributes"""
@@ -154,86 +154,79 @@ class MispCustomConnector:
 
     def misp_send(
         self, _strMISPEventID: str | int, strInput: str, strInfo: str, strUsername: str
-    ) -> str:
+    ) -> Optional[str]:
         """send an event to MISP"""
         try:
             objects = []
             # get comments and tags from string input
             str_comment, tags = self.get_comm_and_tags(strInput)
-            print(tags)
-            if tags is None:
-                self.misp_logger.info("Irate not in Tags: %s equals None", tags)
+            self.misp_logger.debug("Comment: %s", str_comment)
+            self.misp_logger.debug("Tags: %s", ",".join(tags))
+            if not tags:
+                self.misp_logger.info("No tags found in input, returning None")
                 response = None
                 return response
             # setup misp objects
             mispobj_email = MISPObject(name="email")
             mispobj_file = MISPObject(name="file")
             mispobj_files = {}
+            mispobj_domainip_list: List[MISPObject] = []
             url_no = 0
             file_no = 0
             mispobj_urls = {}
 
             # process input
-            for line in strInput.splitlines():
-                if (
-                    "domain:" in line.lower()
-                ):  # Catch domain and add to domain/IP object
+            for key, value in get_key_values(strInput.splitlines()):
+                if key == "domain":  # Catch domain and add to domain/IP object
                     mispobj_domainip = MISPObject(name="domain-ip")
-                    vals = line.split(":", 1)
                     mispobj_domainip.add_attribute(
-                        "domain", value=vals[1].strip(), comment=str_comment
+                        "domain", value=value, comment=str_comment
                     )
-                    objects.append(mispobj_domainip)
-                elif (
-                    "ip:" in line.lower()
-                    or "ip-dst:" in line.lower()
-                    or "ip-src:" in line.lower()
-                ):  # Catch IP and add to domain/IP object
-                    if "domain:" in strInput.splitlines():
-                        mispobj_domainip = MISPObject(name="domain-ip")
-                        vals = line.split(":", 1)
-                        mispobj_domainip.add_attribute(
-                            "ip", value=vals[1].strip(), comment=str_comment
+                    mispobj_domainip_list.append(mispobj_domainip)
+                elif key in [
+                    "ip",
+                    "ip-dst",
+                    "ip-src",
+                ]:  # Catch IP and add to domain/IP object
+                    if mispobj_domainip_list:
+                        # Add IP to the most recent domain-ip object
+                        mispobj_domainip_list[-1].add_attribute(
+                            "ip", value=value, comment=str_comment
                         )
-                        objects.append(mispobj_domainip)
                     else:
                         mispobj_network_connection = MISPObject(
                             name="network-connection"
                         )
-                        vals = line.split(":", 1)
-                        if ("ip:" in line.lower()) or ("ip-dst:" in line.lower()):
+                        if key in ["ip", "ip-dst"]:
                             mispobj_network_connection.add_attribute(
                                 "ip-dst",
                                 type="ip-dst",
-                                value=vals[1].strip(),
+                                value=value,
                                 comment=str_comment,
                             )
                         else:
                             mispobj_network_connection.add_attribute(
                                 "ip-src",
                                 type="ip-src",
-                                value=vals[1].strip(),
+                                value=value,
                                 comment=str_comment,
                             )
                         objects.append(mispobj_network_connection)
 
-                elif (
-                    "source-email:" in line.lower()
-                    or "email-source" in line.lower()
-                    or "from:" in line.lower()
+                elif key in (
+                    "source-email",
+                    "email-source",
+                    "from",
                 ):  # Catch email and add to email object
-                    vals = line.split(":", 1)
                     mispobj_email.add_attribute(
-                        "from", value=vals[1].strip(), comment=str_comment
+                        "from", value=value, comment=str_comment
                     )
-                elif "url:" in line.lower() or (
-                    ("kit:" in line.lower() or ("creds:" in line.lower()))
-                    and (("hxxp" in line.lower()) or ("http" in line.lower()))
+
+                elif key == "url" or (
+                    key in ["kit", "creds"]
+                    and (("hxxp" in value.lower()) or ("http" in value.lower()))
                 ):  # Catch URL and add to URL object
-                    vals = line.split(":", 1)
-                    url = vals[1].strip()
-                    url = refang(url)
-                    parsed = urlparse(url)
+                    parsed = urlparse(refang(line=value))
                     mispobj_url = MISPObject(name="url")
                     mispobj_url.add_attribute(
                         "url",
@@ -257,34 +250,23 @@ class MispCustomConnector:
                     url_no += 1
 
                 # Catch different hashes and add to file object
-                elif "sha1:" in line.lower():
-                    vals = line.split(":", 1)
+                elif key == "sha1":
+                    mispobj_file.add_attribute("sha1", value=value, comment=str_comment)
+                elif key == "sha256":
                     mispobj_file.add_attribute(
-                        "sha1", value=vals[1].strip(), comment=str_comment
+                        "sha256", value=value, comment=str_comment
                     )
-                elif "sha256:" in line.lower():
-                    vals = line.split(":", 1)
-                    mispobj_file.add_attribute(
-                        "sha256", value=vals[1].strip(), comment=str_comment
-                    )
-                elif "md5:" in line.lower():
-                    vals = line.split(":", 1)
-                    mispobj_file.add_attribute(
-                        "md5", value=vals[1].strip(), comment=str_comment
-                    )
-                elif (
-                    "subject:" in line.lower()
-                ):  # or ("subject:" in line): #Catch subject and add to email object
-                    vals = line.split(":", 1)
-                    self.misp_logger.info(f"adding subject: {vals[1].strip()}")
+                elif key == "md5":
+                    mispobj_file.add_attribute("md5", value=value, comment=str_comment)
+                elif key == "subject":  # Catch subject and add to email object
+                    self.misp_logger.info(f"adding subject: {value}")
                     mispobj_email.add_attribute(
-                        "subject", value=vals[1].strip(), comment=str_comment
+                        "subject", value=value, comment=str_comment
                     )
                 elif (
-                    "hash|filename:" in line.lower()
+                    key == "hash|filename"
                 ):  # catch hash|filename pair and add to file object
-                    vals = line.split(":", 1)
-                    val = vals[1].split("|")
+                    val = value.split("|")
                     l_hash = val[0]
                     l_filename = val[1]
                     l_mispobj_file = MISPObject(name="file")
@@ -313,11 +295,28 @@ class MispCustomConnector:
                         )
                         mispobj_files[file_no] = l_mispobj_file
                     file_no += 1
+                else:
+                    self.misp_logger.debug(
+                        "Ignoring input line: %s: %s", key, value
+                    )  # ignore other lines
 
             # add all misp objects to List to be processed and submitted to MISP server as one.
+            for mispobj_domainip in mispobj_domainip_list:
+                if len(mispobj_domainip.attributes) > 0:
+                    self.misp_logger.debug(
+                        "Adding domain-ip object with attributes: %s",
+                        mispobj_domainip.attributes,
+                    )
+                    objects.append(mispobj_domainip)
             if len(mispobj_file.attributes) > 0:
+                self.misp_logger.debug(
+                    "Adding file object with attributes: %s", mispobj_file.attributes
+                )
                 objects.append(mispobj_file)
             if len(mispobj_email.attributes) > 0:
+                self.misp_logger.debug(
+                    "Adding email object with attributes: %s", mispobj_email.attributes
+                )
                 objects.append(mispobj_email)
 
             for u_key, u_value in mispobj_urls.items():
