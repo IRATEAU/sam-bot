@@ -101,8 +101,11 @@ except Exception:
     sys.exit(1)
 
 
+app = flask.Flask(__name__)
 slack_events_adapter = SlackEventAdapter(
-    CONFIG.slack.SLACK_SIGNING_SECRET.get_secret_value(), endpoint="/slack/events"
+    CONFIG.slack.SLACK_SIGNING_SECRET.get_secret_value(),
+    endpoint="/slack/events",
+    server=app,
 )
 
 
@@ -281,7 +284,7 @@ async def main(show_config: bool) -> None:
     channels: List[AsyncSlackResponse] = conversations_list.get("channels", list())
     for channel in channels:
         logger.debug("%s - %s", channel["id"], channel["name"])
-    slack_events_adapter.start(port=CONFIG.port, host=CONFIG.host)
+    app.run(host=CONFIG.host, port=CONFIG.port, debug=CONFIG.testing)
 
 
 @click.command()
