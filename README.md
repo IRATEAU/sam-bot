@@ -120,6 +120,8 @@ Set up a slack app, follow instructions in the git repo here: <https://github.co
 
 The "Request URL" needs to end in "/slack/events"
 
+Doing it with cloudflared's pretty easy - `cloudflared tunnel --url http://localhost:3000` and it'll give you a HTTPS URL.
+
 ## Event Subscriptions
 
 It needs to sub to the following events:
