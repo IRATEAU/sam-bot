@@ -22,7 +22,6 @@ import click
 import requests
 import flask
 from slack_sdk.web.async_client import AsyncWebClient
-# from slack_sdk.socket_mode import SocketModeClient
 
 from slack_sdk.web.async_slack_response import AsyncSlackResponse
 from slackeventsapi import SlackEventAdapter  # type: ignore[import-untyped]
@@ -30,7 +29,6 @@ from sam_bot import SamBotConfig
 from sam_bot.misp import MispCustomConnector
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-# config_file = dir_path + "./config.json"
 
 # parse config file
 CONFIG = SamBotConfig.load()
@@ -132,10 +130,10 @@ def file_handler(event: Dict[str, Any]) -> None:
     files = event.get("files", list())
 
     if not files:
-        logger.warning("Got 0 files from slack, bailing.")
+        logger.warning("Got 0 files from slack message, bailing.")
         return
 
-    logger.info("got %s files from slack", len(files))
+    logger.info("Got %s files from slack", len(files))
     for file_object in files:
         if file_object.get("mode") == "snippet":
             url = file_object.get("url_private_download")
@@ -148,28 +146,38 @@ def file_handler(event: Dict[str, Any]) -> None:
                 "Authorization": f"Bearer {CONFIG.slack.SLACK_BOT_OAUTH_TOKEN.get_secret_value()}"
             }
 
-            response = requests.get(url, headers=headers)
-            response.raise_for_status()
-
-            # TODO: this might just need to be response.text
-            content = response.content.decode("utf-8")
+            try:
+                response = requests.get(url, headers=headers)
+                response.raise_for_status()
+            except requests.RequestException as e:
+                logger.error(
+                    "Failed to download file from Slack url: %s Error: %s", url, e
+                )
+                logger.error("Original Message: %s", event)
+                return
 
             e_time = time.strftime(
                 "%Y-%m-%d %H:%M:%S", time.localtime(float(event["event_ts"]))
             )
             e_title = f"{e_time} - {event_title}"
             loop = asyncio.new_event_loop()
-            userid = event.get("user", "-")
-            username = loop.run_until_complete(
-                get_username(
-                    userid,
-                    slack_client,
-                    CONFIG.slack.SLACK_BOT_OAUTH_TOKEN.get_secret_value(),
-                )
-            )
-            if username is False:
+            userid = event.get("user")
+            if userid is None:
                 username = "Unknown User"
-            misp_response = misp_object.misp_send(0, content, e_title, str(username))
+            else:
+                username = (
+                    loop.run_until_complete(
+                        get_username(
+                            userid,
+                            slack_client,
+                            CONFIG.slack.SLACK_BOT_OAUTH_TOKEN.get_secret_value(),
+                        )
+                    )
+                    or "Unknown User"
+                )
+            misp_response = misp_object.misp_send(
+                0, response.text, e_title, str(username)
+            )
             post_result = loop.run_until_complete(
                 slack_client.chat_postEphemeral(
                     channel=event["channel"],
