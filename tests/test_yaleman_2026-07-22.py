@@ -1,10 +1,13 @@
 """Tests for bugs discovered during repository review, found by yaleman on 2026-07-22."""
 
+import importlib
+from types import ModuleType
 from typing import Any, List, Tuple
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from sam_bot import SamBotConfig
 from sam_bot.misp import MispCustomConnector
 
 
@@ -26,6 +29,17 @@ def misp_connector() -> MispCustomConnector:
             debug=True,
         )
     return connector
+
+
+@pytest.fixture(scope="module")
+def main_module() -> ModuleType:
+    """Import the entrypoint without requiring live Slack or MISP configuration."""
+    config = SamBotConfig.load("config.example.json")
+    with (
+        patch.object(SamBotConfig, "load", return_value=config),
+        patch("sam_bot.misp.MispCustomConnector"),
+    ):
+        return importlib.import_module("sam_bot.__main__")
 
 
 class TestGetCommAndTagsDuplicateTag:
@@ -135,9 +149,7 @@ class TestHandleMessageFallthrough:
     with 403 "Unhandled message type".
     """
 
-    def test_hi_message_returns_200_not_403(self) -> None:
-        from sam_bot.__main__ import handle_message
-
+    def test_hi_message_returns_200_not_403(self, main_module: ModuleType) -> None:
         event_data = {
             "event": {
                 "type": "message",
@@ -151,12 +163,10 @@ class TestHandleMessageFallthrough:
             mock_client.chat_postMessage = AsyncMock(
                 return_value=MagicMock(get=lambda x: "ok")
             )
-            response, status = handle_message(event_data)
+            response, status = main_module.handle_message(event_data)
             assert status == 200, f"Expected 200 but got {status}: {response}"
 
-    def test_files_message_returns_200_not_403(self) -> None:
-        from sam_bot.__main__ import handle_message
-
+    def test_files_message_returns_200_not_403(self, main_module: ModuleType) -> None:
         event_data = {
             "event": {
                 "type": "message",
@@ -175,7 +185,7 @@ class TestHandleMessageFallthrough:
         with patch("sam_bot.__main__.threading.Thread") as mock_thread:
             mock_thread_instance = MagicMock()
             mock_thread.return_value = mock_thread_instance
-            response, status = handle_message(event_data)
+            response, status = main_module.handle_message(event_data)
             assert status == 200, f"Expected 200 but got {status}: {response}"
 
 
@@ -186,9 +196,7 @@ class TestHiSubstringMatch:
     the letters "hi" anywhere, not just the word "hi".
     """
 
-    def test_this_does_not_trigger_hi_response(self) -> None:
-        from sam_bot.__main__ import handle_message
-
+    def test_this_does_not_trigger_hi_response(self, main_module: ModuleType) -> None:
         event_data = {
             "event": {
                 "type": "message",
@@ -200,5 +208,5 @@ class TestHiSubstringMatch:
         }
         with patch("sam_bot.__main__.slack_client") as mock_client:
             mock_client.chat_postMessage = AsyncMock()
-            response, status = handle_message(event_data)
+            response, status = main_module.handle_message(event_data)
             mock_client.chat_postMessage.assert_not_called()
