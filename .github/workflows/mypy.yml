@@ -1,5 +1,5 @@
 ---
-name: Run mypy
+name: Run type checks
 
 "on":
   push:
@@ -13,12 +13,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod
+          fetch-depth: 0 # Fetch all history for .GitInfo and .Lastmod
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-      - name: Running mypy
+          python-version: "3.12"
+      - name: Running checks
         run: |
           python -m pip install --quiet --no-cache-dir --upgrade uv
-          uv run mypy --strict $(basename $(pwd | sed -e 's/-/_/g')) tests
+          uv run ty check
