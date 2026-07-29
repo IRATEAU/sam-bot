@@ -1,0 +1,38 @@
+[project]
+name = "sam_bot"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+
+dependencies = [
+    "click>=8.2.1",
+    "defang==0.5.3",
+    "flask>=3.1.1",
+    "GitPython==3.1.44",
+    "nest-asyncio==1.6.0",
+    "pydantic>=2.11.5",
+    "pydantic-settings>=2.9.1",
+    "pyjokes==0.8.3",
+    "pymisp>=2.4.176",
+    "Requests>=2.31.0",
+    "slack-sdk>=3.35.0",
+    "slackclient==2.9.4",
+    "slackeventsapi>=3.0.3",
+]
+
+[project.scripts]
+sam-bot = "sam_bot.__main__:run"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.16.0",
+    "pytest>=8.4.0",
+    "ruff>=0.11.12",
+    "ty>=0.0.62",
+    "types-requests>=2.32.0.20250602",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

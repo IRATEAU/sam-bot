@@ -1,0 +1,15 @@
+{
+    "slack":{
+        "SLACK_BOT_OAUTH_TOKEN" : "hunter2",
+        "SLACK_SIGNING_SECRET" : "sadfasdfasfasfasdfsadfasdfafasdfasdfasd"
+    },
+    "misp" : {
+        "url" : "https://misp.example.com",
+        "key" : "hunter234",
+        "ssl" : true
+    },
+    "logging" : {
+        "output_file" : "sambot.log",
+        "output_error_file": "sambot_error.log"
+    }
+ }
